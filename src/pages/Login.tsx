@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 export default function Login() {
   const { login } = useAuth();
@@ -8,6 +8,7 @@ export default function Login() {
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,7 +16,8 @@ export default function Login() {
     if (!ok) {
       setError('Credenciales incorrectas');
     } else {
-      navigate(-1);
+      const from = (location.state as any)?.from || '/';
+      navigate(from, { replace: true });
     }
   };
 

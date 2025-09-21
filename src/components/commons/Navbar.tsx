@@ -62,7 +62,7 @@ export default function Navbar({ onSearchResults }: NavbarProps) {
   return (
     <>
       <nav style={{ padding: '1rem', borderBottom: '1px solid #ccc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 'bold' }}>Pharmacy App</span>
+        <Link to="/" style={{ fontWeight: 'bold', textDecoration: 'none', color: 'inherit' }}>Pharmacy App</Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button onClick={() => setCartOpen(true)} style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer' }} aria-label="Ver carrito">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -87,7 +87,9 @@ export default function Navbar({ onSearchResults }: NavbarProps) {
           )}
           {token ? (
             <>
-              <span>Hola, {user?.nombre}</span>
+              <Link to="/user-details" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 'bold' }}>
+                Hola, {user?.nombre}
+              </Link>
               <button onClick={handleLogout}>Cerrar sesión</button>
             </>
           ) : (
