@@ -1,10 +1,18 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import './styles/index.css'
+
+
+import AppRouter from './AppRouter'
+import { AuthProvider } from './hooks/useAuthContext';
+import { CartProvider } from './hooks/useCartContext';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <CartProvider>
+        <AppRouter />
+      </CartProvider>
+    </AuthProvider>
   </StrictMode>,
 )
