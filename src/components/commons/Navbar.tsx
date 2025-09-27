@@ -39,6 +39,14 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
     search: string;
   } | null>(null);
 
+  // Debug: verificar que se reciban las props correctamente
+  useEffect(() => {
+    console.log('🚀 Navbar montado con props:', { 
+      onSearchResults: !!onSearchResults, 
+      onPageChangeRequest: !!onPageChangeRequest 
+    });
+  }, [onSearchResults, onPageChangeRequest]);
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -71,30 +79,16 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
   const performSearch = useCallback(async (tipo: string | null, search: string, page: number = 1) => {
     if (!onSearchResults) return;
     
+    console.log(`🔍 Ejecutando búsqueda: tipo="${tipo}", search="${search}", page=${page}`);
+    
     try {
       let response;
       let searchResult: SearchResult;
       
-      if (search.trim() && tipo) {
-        // Buscar por nombre y luego filtrar por tipo (combinado)
-        response = await productosService.listarPorNombre({
-          nombre: search.trim(),
-          page,
-          pagesize: 25
-        });
-        const filteredProducts = response.productos.filter(p => p.tipo === tipo);
-        searchResult = {
-          productos: filteredProducts,
-          total: filteredProducts.length, // Aproximado para filtrado local
-          page,
-          pagesize: 25,
-          totalPages: Math.ceil(filteredProducts.length / 25),
-          isSearch: true,
-          searchQuery: search.trim(),
-          tipoFilter: tipo
-        };
-      } else if (search.trim()) {
-        // Solo búsqueda por nombre
+      // Simplificamos: si hay texto de búsqueda, usamos búsqueda por nombre
+      // Si solo hay tipo, usamos filtro por tipo
+      if (search.trim()) {
+        console.log(`📝 Búsqueda por nombre: "${search.trim()}"`);
         response = await productosService.listarPorNombre({
           nombre: search.trim(),
           page,
@@ -107,10 +101,11 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
           pagesize: response.pagesize,
           totalPages: Math.ceil(response.total / response.pagesize),
           isSearch: true,
-          searchQuery: search.trim()
+          searchQuery: search.trim(),
+          tipoFilter: tipo || undefined
         };
       } else if (tipo) {
-        // Solo filtro por tipo
+        console.log(`🏷️ Filtro por tipo: "${tipo}"`);
         response = await productosService.listarPorTipo({
           tipo,
           page,
@@ -127,16 +122,19 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
         };
       } else {
         // Sin filtros, limpiar resultados para volver al estado normal
+        console.log('🧹 Limpiando filtros, volviendo a vista normal');
         setActiveSearch(null);
         onSearchResults(undefined);
         return;
       }
       
+      console.log(`✅ Resultados obtenidos: ${searchResult.productos.length} productos de ${searchResult.total} total`);
+      
       // Guardar parámetros de búsqueda activa para paginación
       setActiveSearch({ tipo, search });
       onSearchResults(searchResult);
     } catch (error) {
-      console.error('Error filtrando productos:', error);
+      console.error('❌ Error filtrando productos:', error);
       onSearchResults({
         productos: [],
         total: 0,
@@ -151,11 +149,13 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
   // Handler para el dropdown (sin debounce, es inmediato)
   const handleTipoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value === 'all' ? null : e.target.value;
+    console.log(`🏷️ Cambio de tipo seleccionado: ${value}`);
     setSelectedTipo(value);
     
     // Limpiar debounce anterior si existe
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
+      debounceRef.current = null;
     }
     
     // Ejecutar búsqueda inmediatamente para cambio de tipo
@@ -165,6 +165,7 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
   // Handler para el searchbar (con debounce)
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const search = e.target.value;
+    console.log(`📝 Cambio en barra de búsqueda: "${search}"`);
     setSearchText(search);
     
     // Limpiar el timeout anterior
@@ -172,10 +173,18 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
       clearTimeout(debounceRef.current);
     }
 
+    // Si el texto está vacío, búsqueda inmediata
+    if (search.trim() === '') {
+      console.log('🧹 Texto vacío, búsqueda inmediata');
+      performSearch(selectedTipo, search);
+      return;
+    }
+
     // Crear nuevo timeout para debounce
     debounceRef.current = setTimeout(() => {
+      console.log('⏰ Ejecutando búsqueda después de debounce');
       performSearch(selectedTipo, search);
-    }, 500);
+    }, 300); // Reducimos el tiempo de debounce
   };
 
   return (
@@ -217,6 +226,32 @@ export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarP
                   border: '1px solid #ccc'
                 }}
               />
+              {(selectedTipo || searchText) && (
+                <button
+                  onClick={() => {
+                    console.log('🧹 Limpiando filtros manualmente');
+                    setSelectedTipo(null);
+                    setSearchText('');
+                    if (debounceRef.current) {
+                      clearTimeout(debounceRef.current);
+                      debounceRef.current = null;
+                    }
+                    performSearch(null, '');
+                  }}
+                  style={{
+                    padding: '0.5rem',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    fontSize: '0.8rem'
+                  }}
+                  title="Limpiar filtros"
+                >
+                  ✕
+                </button>
+              )}
             </>
           )}
           {token ? (

@@ -124,57 +124,39 @@ export default function Home({
 
   return (
     <main>
-      <h1>Home Page</h1>
-      {/* Botones temporales de prueba - REMOVER DESPUÉS */}
-      <div style={{ display: 'flex', gap: '10px', margin: '10px 0' }}>
-        <button 
-          onClick={testRecetasEndpoint}
-          style={{ 
-            background: '#10b981', 
-            color: 'white', 
-            padding: '8px 16px', 
-            border: 'none', 
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          🧪 Probar API Recetas
-        </button>
-        <button 
-          onClick={testProductosEndpoint}
-          style={{ 
-            background: '#3b82f6', 
-            color: 'white', 
-            padding: '8px 16px', 
-            border: 'none', 
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          🧪 Probar API Productos
-        </button>
-      </div>
-      
       {loading ? (
         <p>Cargando productos...</p>
       ) : (
         <>
-          <p>
-            Mostrando {productos.length} de {total} productos
-            {!searchResults && ` (Página ${currentPage} de ${totalPages})`}
-            {searchResults && (
-              <span>
-                {searchResults.searchQuery && ` - Búsqueda: "${searchResults.searchQuery}"`}
-                {searchResults.tipoFilter && ` - Tipo: ${searchResults.tipoFilter}`}
-                {searchResults.totalPages > 1 && ` (Página ${searchResults.page} de ${searchResults.totalPages})`}
-              </span>
-            )}
-          </p>
+          <div style={{ 
+            background: searchResults ? '#f0f9ff' : '#f9fafb', 
+            padding: '12px', 
+            borderRadius: '6px', 
+            marginBottom: '16px',
+            border: searchResults ? '1px solid #0ea5e9' : '1px solid #e5e7eb'
+          }}>
+            <p style={{ margin: 0, fontWeight: 'bold' }}>
+              {searchResults ? '🔍 Resultados de búsqueda/filtro:' : '📦 Vista normal:'}
+            </p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>
+              Mostrando {productos.length} de {total} productos
+              {!searchResults && ` (Página ${currentPage} de ${totalPages})`}
+              {searchResults && (
+                <span>
+                  {searchResults.searchQuery && ` - Búsqueda: "${searchResults.searchQuery}"`}
+                  {searchResults.tipoFilter && ` - Tipo: ${searchResults.tipoFilter}`}
+                  {searchResults.totalPages > 1 && ` (Página ${searchResults.page} de ${searchResults.totalPages})`}
+                </span>
+              )}
+            </p>
+          </div>
+          
           <ProductCardList products={productos} />
+          
           {(!searchResults || (searchResults && searchResults.totalPages > 1)) && (
             <Pagination 
-              currentPage={currentPage}
-              totalPages={totalPages}
+              currentPage={searchResults ? searchResults.page : currentPage}
+              totalPages={searchResults ? searchResults.totalPages : totalPages}
               onPageChange={handlePageChange}
             />
           )}

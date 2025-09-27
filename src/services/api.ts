@@ -46,16 +46,16 @@ const createApiInstance = (baseURL: string): AxiosInstance => {
 
 // Instancias específicas para cada backend
 export const recetasApi = createApiInstance(
-  import.meta.env.VITE_RECETAS_API_URL || 'http://localhost:3001/api'
+  import.meta.env.VITE_RECETAS_API_URL || 'http://localhost:9000/api'
 );
 
-// Preparado para futuros backends
+// Preparado para futuros backends - usando el mismo backend por ahora
 export const productosApi = createApiInstance(
-  import.meta.env.VITE_PRODUCTOS_API_URL || 'http://localhost:3002/api'
+  import.meta.env.VITE_PRODUCTOS_API_URL || 'http://localhost:9000/api'
 );
 
 export const usuariosApi = createApiInstance(
-  import.meta.env.VITE_USUARIOS_API_URL || 'http://localhost:3003/api'
+  import.meta.env.VITE_USUARIOS_API_URL || 'http://localhost:9000/api'
 );
 
 // Exportar por defecto la instancia de recetas para compatibilidad
