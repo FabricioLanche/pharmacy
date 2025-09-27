@@ -1,4 +1,4 @@
-import type { Producto } from '../../types/Producto';
+import type { Producto } from '../../types/ProductoBackend';
 import { Link } from 'react-router-dom';
 
 interface ProductCardListProps {

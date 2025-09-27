@@ -7,7 +7,7 @@ export default function CartDetail() {
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  const handleCantidadChange = (id: string, cantidad: number) => {
+  const handleCantidadChange = (id: number, cantidad: number) => {
     const item = cart.items.find(i => i.producto.id === id);
     if (item && cantidad > 0) {
       addItem(item.producto, cantidad - item.cantidad);

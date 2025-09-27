@@ -1,19 +1,49 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { productsData } from '../../assets/productsData';
-import type { Producto } from '../../types/Producto';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '../../hooks/useCartContext';
+import { productosService } from '../../services/productosService';
+import type { Producto } from '../../types/ProductoBackend';
 
 export default function ProductDetailsView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const producto = productsData.find((p: Producto) => p.id === id);
   const { addItem } = useCart();
   const [cantidad, setCantidad] = useState(1);
   const [added, setAdded] = useState(false);
+  const [producto, setProducto] = useState<Producto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!producto) {
-    return <p>Producto no encontrado.</p>;
+  useEffect(() => {
+    const cargarProducto = async () => {
+      if (!id) {
+        setError('ID de producto no válido');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await productosService.obtenerProductoPorId(Number(id));
+        setProducto(response);
+      } catch (err) {
+        console.error('Error cargando producto:', err);
+        setError('No se pudo cargar el producto');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarProducto();
+  }, [id]);
+
+  if (loading) {
+    return <p>Cargando producto...</p>;
+  }
+
+  if (error || !producto) {
+    return <p>{error || 'Producto no encontrado.'}</p>;
   }
 
   return (

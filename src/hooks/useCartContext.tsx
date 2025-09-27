@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import type { Producto } from '../types/Producto';
+import type { Producto } from '../types/ProductoBackend';
 
 export interface CartItem {
   producto: Producto;
@@ -12,14 +12,14 @@ interface CartState {
 
 type CartAction =
   | { type: 'ADD_ITEM'; producto: Producto; cantidad: number }
-  | { type: 'REMOVE_ITEM'; productoId: string }
+  | { type: 'REMOVE_ITEM'; productoId: number }
   | { type: 'CLEAR_CART' }
   | { type: 'SET_CART'; items: CartItem[] };
 
 const CartContext = createContext<{
   cart: CartState;
   addItem: (producto: Producto, cantidad: number) => void;
-  removeItem: (productoId: string) => void;
+  removeItem: (productoId: number) => void;
   clearCart: () => void;
   checkout: () => void;
 } | undefined>(undefined);
@@ -74,7 +74,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addItem = (producto: Producto, cantidad: number) => {
     dispatch({ type: 'ADD_ITEM', producto, cantidad });
   };
-  const removeItem = (productoId: string) => {
+  const removeItem = (productoId: number) => {
     dispatch({ type: 'REMOVE_ITEM', productoId });
   };
   const clearCart = () => {

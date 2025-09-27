@@ -1,25 +1,43 @@
-
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuthContext';
-import SearchBar from './SearchBar';
-import { TipoProducto } from '../../types/Producto';
-import { useState } from 'react';
+import { TipoProductoBackend } from '../../types/ProductoBackend';
+import { productosService } from '../../services/productosService';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import CartSidebar from './CartSidebar';
 import { useCart } from '../../hooks/useCartContext';
+import type { Producto } from '../../types/ProductoBackend';
 
-interface NavbarProps {
-  onSearchResults?: (results: any[]) => void;
+interface SearchResult {
+  productos: Producto[];
+  total: number;
+  page: number;
+  pagesize: number;
+  totalPages: number;
+  isSearch: boolean;
+  searchQuery?: string;
+  tipoFilter?: string;
 }
 
+interface NavbarProps {
+  onSearchResults?: (results: SearchResult | undefined) => void;
+  onPageChangeRequest?: (callback: (page: number) => Promise<void>) => void;
+}
 
-export default function Navbar({ onSearchResults }: NavbarProps) {
+export default function Navbar({ onSearchResults, onPageChangeRequest }: NavbarProps) {
   const { token, logout, user } = useAuth();
   const { cart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedTipo, setSelectedTipo] = useState<TipoProducto | null>(null);
+  const [selectedTipo, setSelectedTipo] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
+  const debounceRef = useRef<number | null>(null);
+  
+  // Estado para mantener la búsqueda activa
+  const [activeSearch, setActiveSearch] = useState<{
+    tipo: string | null;
+    search: string;
+  } | null>(null);
 
   const handleLogout = () => {
     logout();
@@ -28,35 +46,136 @@ export default function Navbar({ onSearchResults }: NavbarProps) {
 
   const isProductDetails = location.pathname.startsWith('/product/');
 
-  // Obtener todos los tipos del enum como array
-  const tiposArray = Object.values(TipoProducto);
+  // Obtener todos los tipos del backend
+  const tiposArray = Object.values(TipoProductoBackend);
 
-  // Filtrar productos combinando búsqueda y tipo
-  const handleFilterChange = (tipo: TipoProducto | null, search: string) => {
-    setSelectedTipo(tipo);
-    setSearchText(search);
-    import('../../assets/productsData').then(({ productsData }) => {
-      let filtered = productsData;
-      if (tipo) {
-        filtered = filtered.filter(p => p.tipo === tipo);
-      }
-      if (search.trim() !== '') {
-        filtered = filtered.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase()));
-      }
-      if (onSearchResults) onSearchResults(filtered);
-    });
-  };
+  // Función para cambio de página en búsquedas activas
+  const handleSearchPageChange = useCallback(async (page: number) => {
+    if (!activeSearch) {
+      console.log('No hay búsqueda activa para paginar');
+      return;
+    }
+    
+    console.log(`🔍 Cambiando a página ${page} de búsqueda:`, activeSearch);
+    await performSearch(activeSearch.tipo, activeSearch.search, page);
+  }, [activeSearch]);
 
-  // Handler para el dropdown
+  // Registrar la función de cambio de página con el componente padre
+  useEffect(() => {
+    if (onPageChangeRequest) {
+      onPageChangeRequest(handleSearchPageChange);
+    }
+  }, [handleSearchPageChange, onPageChangeRequest]);
+
+  // Función de filtrado usando endpoints del backend
+  const performSearch = useCallback(async (tipo: string | null, search: string, page: number = 1) => {
+    if (!onSearchResults) return;
+    
+    try {
+      let response;
+      let searchResult: SearchResult;
+      
+      if (search.trim() && tipo) {
+        // Buscar por nombre y luego filtrar por tipo (combinado)
+        response = await productosService.listarPorNombre({
+          nombre: search.trim(),
+          page,
+          pagesize: 25
+        });
+        const filteredProducts = response.productos.filter(p => p.tipo === tipo);
+        searchResult = {
+          productos: filteredProducts,
+          total: filteredProducts.length, // Aproximado para filtrado local
+          page,
+          pagesize: 25,
+          totalPages: Math.ceil(filteredProducts.length / 25),
+          isSearch: true,
+          searchQuery: search.trim(),
+          tipoFilter: tipo
+        };
+      } else if (search.trim()) {
+        // Solo búsqueda por nombre
+        response = await productosService.listarPorNombre({
+          nombre: search.trim(),
+          page,
+          pagesize: 25
+        });
+        searchResult = {
+          productos: response.productos,
+          total: response.total,
+          page: response.page,
+          pagesize: response.pagesize,
+          totalPages: Math.ceil(response.total / response.pagesize),
+          isSearch: true,
+          searchQuery: search.trim()
+        };
+      } else if (tipo) {
+        // Solo filtro por tipo
+        response = await productosService.listarPorTipo({
+          tipo,
+          page,
+          pagesize: 25
+        });
+        searchResult = {
+          productos: response.productos,
+          total: response.total,
+          page: response.page,
+          pagesize: response.pagesize,
+          totalPages: Math.ceil(response.total / response.pagesize),
+          isSearch: true,
+          tipoFilter: tipo
+        };
+      } else {
+        // Sin filtros, limpiar resultados para volver al estado normal
+        setActiveSearch(null);
+        onSearchResults(undefined);
+        return;
+      }
+      
+      // Guardar parámetros de búsqueda activa para paginación
+      setActiveSearch({ tipo, search });
+      onSearchResults(searchResult);
+    } catch (error) {
+      console.error('Error filtrando productos:', error);
+      onSearchResults({
+        productos: [],
+        total: 0,
+        page: 1,
+        pagesize: 25,
+        totalPages: 0,
+        isSearch: true
+      });
+    }
+  }, [onSearchResults]);
+
+  // Handler para el dropdown (sin debounce, es inmediato)
   const handleTipoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value === 'all' ? null : (e.target.value as TipoProducto);
-    handleFilterChange(value, searchText);
+    const value = e.target.value === 'all' ? null : e.target.value;
+    setSelectedTipo(value);
+    
+    // Limpiar debounce anterior si existe
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    // Ejecutar búsqueda inmediatamente para cambio de tipo
+    performSearch(value, searchText);
   };
 
-  // Handler para el searchbar
-  const handleSearch = (_: any[], search: string) => {
+  // Handler para el searchbar (con debounce)
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const search = e.target.value;
     setSearchText(search);
-    handleFilterChange(selectedTipo, search);
+    
+    // Limpiar el timeout anterior
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    // Crear nuevo timeout para debounce
+    debounceRef.current = setTimeout(() => {
+      performSearch(selectedTipo, search);
+    }, 500);
   };
 
   return (
@@ -76,13 +195,28 @@ export default function Navbar({ onSearchResults }: NavbarProps) {
           </button>
           {!isProductDetails && (
             <>
-              <select value={selectedTipo ?? 'all'} onChange={handleTipoChange} style={{ padding: '0.3rem 0.6rem', borderRadius: 4 }}>
+              <select 
+                value={selectedTipo ?? 'all'} 
+                onChange={handleTipoChange} 
+                style={{ padding: '0.3rem 0.6rem', borderRadius: 4 }}
+              >
                 <option value="all">Todos los tipos</option>
                 {tiposArray.map(tipo => (
-                  <option key={tipo} value={tipo}>{tipo.charAt(0).toUpperCase() + tipo.slice(1)}</option>
+                  <option key={tipo} value={tipo}>{tipo}</option>
                 ))}
               </select>
-              <SearchBar onResults={handleSearch} />
+              <input
+                type="text"
+                placeholder="Buscar productos..."
+                value={searchText}
+                onChange={handleSearchChange}
+                style={{ 
+                  padding: '0.5rem', 
+                  minWidth: 200,
+                  borderRadius: 4,
+                  border: '1px solid #ccc'
+                }}
+              />
             </>
           )}
           {token ? (
