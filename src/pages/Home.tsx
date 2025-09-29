@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import ProductCardList from '../components/Home/ProductCardList';
-import { recetasService } from '../services/recetasService';
 import { productosService } from '../services/productosService';
 import type { Producto, ProductosResponse } from '../types/ProductoBackend';
 import Pagination from '../components/commons/Pagination';
@@ -89,36 +88,6 @@ export default function Home({
       } else {
         console.log('❌ Función de cambio de página de búsqueda no disponible');
       }
-    }
-  };
-  
-  const testRecetasEndpoint = async () => {
-    try {
-      console.log('🧪 Probando endpoint de recetas...');
-      const response = await recetasService.listarRecetas({
-        page: 1,
-        limit: 5
-      });
-      console.log('✅ Respuesta del endpoint:', response);
-      alert(`✅ Endpoint funcionando! Total recetas: ${response.total}`);
-    } catch (error) {
-      console.error('❌ Error en endpoint:', error);
-      alert('❌ Error conectando con el backend de recetas');
-    }
-  };
-
-  const testProductosEndpoint = async () => {
-    try {
-      console.log('🧪 Probando endpoint de productos...');
-      const response = await productosService.listarProductos({
-        page: 1,
-        pagesize: 5
-      });
-      console.log('✅ Respuesta del endpoint:', response);
-      alert(`✅ Endpoint funcionando! Total productos: ${response.total}`);
-    } catch (error) {
-      console.error('❌ Error en endpoint:', error);
-      alert('❌ Error conectando con el backend de productos');
     }
   };
 
